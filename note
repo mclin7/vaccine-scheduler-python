@@ -1,0 +1,11 @@
+conda env config vars set Server=mclin7
+conda env config vars set DBName=hw3
+conda env config vars set UserID=mclin7
+conda env config vars set Password=Lin123456789
+
+
+create_patient patient_mclin patientpwd
+create_caregiver caregiver_mclin caregiverpwd
+login_patient patient_mclin patientpwd
+login_caregiver caregiver_mclin caregiverpwd
+search_caregiver_schedule
