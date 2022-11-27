@@ -81,3 +81,27 @@ class Caregiver:
             raise
         finally:
             cm.close_connection()
+
+    def show_appointment(self):
+        cm = ConnectionManager()
+        conn = cm.create_connection()
+        cursor = conn.cursor()
+
+        searchavailability = "SELECT ID, Vaccine_Name, Time, Patient_Name From Appointment WHERE Caregiver_Name = ?"
+
+        try:
+            cursor.execute(searchavailability % (self.username,))
+            print("Appointment listed below:")
+            has = False
+            for row in cursor:
+                print("appointment ID: %s, vaccine name: %s, date: %s, patient name: %s" % row)
+                has = True
+
+            if not has:
+                print('No appointment yet!')
+
+        except pymssql.Error:
+            # print("Error occurred when updating vaccine availability")
+            raise
+        finally:
+            cm.close_connection()

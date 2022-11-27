@@ -25,10 +25,9 @@ CREATE TABLE Patients (
 );
 
 CREATE TABLE Appointment (
-    ID int PRIMARY KEY,
+    ID int PRIMARY KEY IDENTITY(10000, 1),
     Patient_Name varchar(255) REFERENCES Patients(Username),
     Caregiver_Name varchar(255) REFERENCES Caregivers(Username),
     Vaccine_Name varchar(255) REFERENCES Vaccines(Name),
     Time date
-
 );

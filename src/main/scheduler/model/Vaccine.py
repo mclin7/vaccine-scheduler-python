@@ -5,7 +5,7 @@ import pymssql
 
 
 class Vaccine:
-    def __init__(self, vaccine_name, available_doses):
+    def __init__(self, vaccine_name, available_doses=None):
         self.vaccine_name = vaccine_name
         self.available_doses = available_doses
 
@@ -97,3 +97,23 @@ class Vaccine:
 
     def __str__(self):
         return f"(Vaccine Name: {self.vaccine_name}, Available Doses: {self.available_doses})"
+
+    @staticmethod
+    def get_all():
+        cm = ConnectionManager()
+        conn = cm.create_connection()
+        cursor = conn.cursor()
+
+        statistics_vaccine = 'SELECT Name, Doses FROM Vaccines'
+        try:
+            cursor.execute(statistics_vaccine)
+            result = []
+            for row in cursor:
+                result.append(Vaccine(row[0], row[1]))
+            return result
+        except pymssql.Error:
+            print("Search from Vaccines error")
+            raise
+        finally:
+            cm.close_connection()
+            return []

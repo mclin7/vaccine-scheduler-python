@@ -1,8 +1,12 @@
 import sys
 sys.path.append("../util/*")
 sys.path.append("../db/*")
+sys.path.append("../model/*")
 from util.Util import Util
 from db.ConnectionManager import ConnectionManager
+from Availability import Availability
+from Appointment import Appointment
+from Vaccine import Vaccine
 import pymssql
 
 
@@ -61,6 +65,60 @@ class Patient:
             # you must call commit() to persist your data if you don't set autocommit to True
             conn.commit()
         except pymssql.Error:
+            raise
+        finally:
+            cm.close_connection()
+
+    def reserve(self, caregiver, vaccine, date):
+        if not self.is_reserved(date):
+            print('Already reserved, Please try again!')
+            return
+
+        Availability.update_availability(caregiver, date)
+        vaccine.decrease_available_doses(1)
+        appointment = Appointment(self.username, caregiver, vaccine.get_vaccine_name(), date)
+        appointment.save_to_db()
+        print("Appointment ID: {appointment_id}, Caregiver username: {username}".format(
+            appointment_id = appointment.ID,
+            username = self.username
+        ))
+
+    def is_reserved(self, date):
+        cm = ConnectionManager()
+        conn = cm.create_connection()
+        cursor = conn.cursor()
+
+        is_reserved = "SELECT Patient_Name FROM Appointment WHERE Patient_Name = ? and Time = ?"
+        try:
+            cursor.execute(is_reserved % (self.username, date))
+            for _ in cursor:
+                return True
+            return False
+        except pymssql.Error:
+            # print("Error occurred when updating vaccine availability")
+            raise
+        finally:
+            cm.close_connection()
+
+    def show_appointment(self):
+        cm = ConnectionManager()
+        conn = cm.create_connection()
+        cursor = conn.cursor()
+
+        searchavailability = "SELECT ID, Vaccine_Name, Time, Caregiver_Name From Appointment WHERE Patient_Name = ? order by ID"
+        try:
+            cursor.execute(searchavailability % (self.username, ))
+            print("Appointment listed below:")
+            has = False
+            for row in cursor:
+                print("appointment ID: %s, vaccine name: %s, date: %s, caregiver name: %s" % row)
+                has = True
+
+            if not has:
+                print('No appointment yet!')
+
+        except pymssql.Error:
+            # print("Error occurred when updating vaccine availability")
             raise
         finally:
             cm.close_connection()

@@ -1,6 +1,7 @@
 from model.Vaccine import Vaccine
 from model.Caregiver import Caregiver
 from model.Patient import Patient
+from model.Availability import Availability
 from util.Util import Util
 from db.ConnectionManager import ConnectionManager
 import pymssql
@@ -28,6 +29,9 @@ def create_patient(tokens):
     username, password = tokens[1], tokens[2]
     if username_exists_patient(username):
         print("Username taken, try again!")
+        return
+
+    if not check_strong_pwd(password):
         return
 
     salt = Util.generate_salt()
@@ -63,6 +67,8 @@ def create_caregiver(tokens):
         print("Username taken, try again!")
         return
 
+    if not check_strong_pwd(password):
+        return
     salt = Util.generate_salt()
     hash = Util.generate_hash(password, salt)
 
@@ -172,6 +178,7 @@ def login_caregiver(tokens):
     # login_caregiver <username> <password>
     # check 1: if someone's already logged-in, they need to log out first
     global current_caregiver
+    global current_patient
     if current_caregiver is not None or current_patient is not None:
         print("User already logged in.")
         return
@@ -208,14 +215,66 @@ def search_caregiver_schedule(tokens):
     """
     TODO: Part 2
     """
-    pass
+    global current_caregiver
+    global current_patient
+    if current_caregiver is None or current_patient is None:
+        print("Please login first")
+        return
+
+    # check 2: the length for tokens need to be exactly 2 to include all information (with the operation name)
+    if len(tokens) != 2:
+        print("Login failed.")
+        return
+    try:
+        vaccines = Vaccine.get_all()
+        caregivers_names = Availability.get_availabilities(tokens[1])
+        print('Available caregivers:')
+        for careg in caregivers_names:
+            print(careg)
+        print('Vaccine information:')
+        for vac in vaccines:
+            print(vac)
+    except pymssql.Error as e:
+        print("Please try again!")
+        print("Db-Error:", e)
+        quit()
+    except Exception as e:
+        print("Please try again!")
+        print("Error:", e)
+        return
 
 
 def reserve(tokens):
     """
     TODO: Part 2
     """
-    pass
+    global current_caregiver
+    global current_patient
+    if current_caregiver is None and current_patient is None:
+        print("Please login first")
+        return
+
+    if current_patient is None:
+        print("Please login as a patient!")
+
+    if len(tokens) != 3:
+        print("Please try again!")
+        return
+
+    vacc = Vaccine(tokens[2])
+    vacc.get()
+
+    caregiver = Availability.get_available_caregiver(tokens[1])
+    if not caregiver:
+        print("No Caregiver is available!")
+
+    if vacc.get_available_doses() == 0:
+        print("Not enough available doses!")
+
+    try:
+        currentPatient.reserve(caregiver, vacc, tokens[1])
+    except:
+        print('Please try again!')
 
 
 def upload_availability(tokens):
@@ -321,14 +380,56 @@ def show_appointments(tokens):
     '''
     TODO: Part 2
     '''
-    pass
+    global current_caregiver
+    global current_patient
+    if current_caregiver is None and current_patient is None:
+        print("Please login first")
+        return
+
+    if len(tokens) != 1:
+        print("Please try again!")
+        return
+
+    try:
+        if current_patient:
+            current_patient.show_appointment()
+        if current_caregiver:
+            current_caregiver.show_appointment()
+    except Exception as ex:
+        print("Please try again!")
 
 
 def logout(tokens):
     """
     TODO: Part 2
     """
-    pass
+    global current_caregiver
+    global current_patient
+    if current_caregiver is None and current_patient is None:
+        print("Please login first")
+        return
+
+    current_patient = None
+    current_caregiver = None
+    print("Successfully logged out!")
+
+
+def check_strong_pwd(pwd):
+    mes = []
+    if len(pwd) < 8:
+        mes.append('At least 8 characters')
+    if not (any(ele.isupper() for ele in pwd) and any(ele.islower() for ele in pwd)):
+        mes.append('A mixture of both uppercase and lowercase letters.')
+    if not (any(ele.isdigit() for ele in pwd) and any(ele.isalpha() for ele in pwd)):
+        mes.append('A mixture of letters and numbers')
+    if not any(ele in ["!", "@", "#", "?"] for ele in pwd):
+        mes.append("Inclusion of at least one special character, from “!”, “@”, “#”, “?”.")
+    if mes:
+        print('Your password not strong, please make sure:')
+        for message in mes:
+            print(message)
+        return False
+    return True
 
 
 def start():
