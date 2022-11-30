@@ -20,9 +20,12 @@ class Availability:
         conn = cm.create_connection()
         cursor = conn.cursor()
 
-        search_availability = "SELECT Username From Availabilities WHERE Time = %s and isReserved = %s order by Username"
+        search_availability = "SELECT av.Username From Availabilities as av left join Appointment as ap " \
+                              "on av.Time = ap.Time and av.Username = ap.Caregiver_Name " \
+                              "where av.Time = '%s' and ap.Caregiver_Name is null order by av.Username"
+
         try:
-            cursor.execute(search_availability % (date, 0))
+            cursor.execute(search_availability % date)
             result = []
             for row in cursor:
                 result.append(row[0])
@@ -32,7 +35,6 @@ class Availability:
             raise
         finally:
             cm.close_connection()
-            return []
 
     @staticmethod
     def get_available_caregiver(date):
@@ -40,31 +42,16 @@ class Availability:
         conn = cm.create_connection()
         cursor = conn.cursor()
 
-        search_availability = "SELECT Username From Availabilities WHERE Time = %s and isReserved = %s order by Username limit 1"
+        search_availability = "SELECT top 1 av.Username From Availabilities as av left join Appointment as ap " \
+                              "on av.Time = ap.Time and av.Username = ap.Caregiver_Name " \
+                              "where av.Time = '%s' and ap.Caregiver_Name is null order by av.Username "
         try:
-            cursor.execute(search_availability % (date, 0))
+            cursor.execute(search_availability % date)
             for row in cursor:
                 return row[0]
             return
         except pymssql.Error:
             # print("Error occurred when updating vaccine availability")
-            raise
-        finally:
-            cm.close_connection()
-            return []
-
-    @staticmethod
-    def update_availability(name, date):
-        cm = ConnectionManager()
-        conn = cm.create_connection()
-        cursor = conn.cursor()
-
-        reserved = "UPDATE Availabilities SET isReserved = %s WHERE Username = %s and Time = %s"
-        try:
-            cursor.execute(reserved % (1, name, date))
-            # you must call commit() to persist your data if you don't set autocommit to True
-            conn.commit()
-        except pymssql.Error:
             raise
         finally:
             cm.close_connection()

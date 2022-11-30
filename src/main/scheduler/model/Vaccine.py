@@ -116,4 +116,3 @@ class Vaccine:
             raise
         finally:
             cm.close_connection()
-            return []

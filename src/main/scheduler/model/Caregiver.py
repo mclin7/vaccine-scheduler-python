@@ -87,7 +87,7 @@ class Caregiver:
         conn = cm.create_connection()
         cursor = conn.cursor()
 
-        searchavailability = "SELECT ID, Vaccine_Name, Time, Patient_Name From Appointment WHERE Caregiver_Name = ?"
+        searchavailability = "SELECT ID, Vaccine_Name, Time, Patient_Name From Appointment WHERE Caregiver_Name = '%s'"
 
         try:
             cursor.execute(searchavailability % (self.username,))

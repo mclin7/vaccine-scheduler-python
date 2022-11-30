@@ -171,7 +171,7 @@ def login_patient(tokens):
         print("Login failed.")
     else:
         print("Logged in as: " + username)
-        current_caregiver = patient
+        current_patient = patient
 
 
 def login_caregiver(tokens):
@@ -217,7 +217,7 @@ def search_caregiver_schedule(tokens):
     """
     global current_caregiver
     global current_patient
-    if current_caregiver is None or current_patient is None:
+    if current_caregiver is None and current_patient is None:
         print("Please login first")
         return
 
@@ -225,9 +225,17 @@ def search_caregiver_schedule(tokens):
     if len(tokens) != 2:
         print("Login failed.")
         return
+
+    date = tokens[1]
+    # assume input is hyphenated in the format mm-dd-yyyy
+    date_tokens = date.split("-")
+    month = int(date_tokens[0])
+    day = int(date_tokens[1])
+    year = int(date_tokens[2])
     try:
+        d = datetime.datetime(year, month, day)
         vaccines = Vaccine.get_all()
-        caregivers_names = Availability.get_availabilities(tokens[1])
+        caregivers_names = Availability.get_availabilities(d)
         print('Available caregivers:')
         for careg in caregivers_names:
             print(careg)
@@ -238,6 +246,9 @@ def search_caregiver_schedule(tokens):
         print("Please try again!")
         print("Db-Error:", e)
         quit()
+    except ValueError:
+        print("Please enter a valid date!")
+        return
     except Exception as e:
         print("Please try again!")
         print("Error:", e)
@@ -256,25 +267,41 @@ def reserve(tokens):
 
     if current_patient is None:
         print("Please login as a patient!")
+        return
 
     if len(tokens) != 3:
         print("Please try again!")
         return
 
-    vacc = Vaccine(tokens[2])
-    vacc.get()
-
-    caregiver = Availability.get_available_caregiver(tokens[1])
-    if not caregiver:
-        print("No Caregiver is available!")
-
-    if vacc.get_available_doses() == 0:
-        print("Not enough available doses!")
-
+    date = tokens[1]
+    # assume input is hyphenated in the format mm-dd-yyyy
+    date_tokens = date.split("-")
+    month = int(date_tokens[0])
+    day = int(date_tokens[1])
+    year = int(date_tokens[2])
     try:
-        currentPatient.reserve(caregiver, vacc, tokens[1])
-    except:
-        print('Please try again!')
+        vacc = Vaccine(tokens[2])
+        vacc.get()
+
+        d = datetime.datetime(year, month, day)
+        caregiver = Availability.get_available_caregiver(d)
+        if not caregiver:
+            print("No Caregiver is available!")
+
+        if vacc.get_available_doses() == 0:
+            print("Not enough available doses!")
+        current_patient.reserve(caregiver, vacc, d)
+    except pymssql.Error as e:
+        print("Please try again!")
+        print("Db-Error:", e)
+        quit()
+    except ValueError:
+        print("Please enter a valid date!")
+        return
+    except Exception as e:
+        print("Please try again!")
+        print("Error:", e)
+        return
 
 
 def upload_availability(tokens):
@@ -395,8 +422,10 @@ def show_appointments(tokens):
             current_patient.show_appointment()
         if current_caregiver:
             current_caregiver.show_appointment()
-    except Exception as ex:
-        print("Please try again!")
+    except Exception as e:
+        print("Error occurred when showing appointments")
+        print("Error:", e)
+        return
 
 
 def logout(tokens):
